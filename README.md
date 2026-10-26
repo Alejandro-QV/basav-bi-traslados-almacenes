@@ -28,12 +28,29 @@ La implementación es **local en SQL Server**; no se construye un clúster distr
 | `data/` | Sin datos. Ver la sección de privacidad. |
 | `docs/` | Documentación del modelo (diagrama y diccionario de datos, pendientes). |
 
-## Entorno
+## Entorno y dependencias
 
-- SQL Server 2022 Developer (RTM-CU25), ejecutado localmente en Docker y expuesto por el puerto 1433.
-- SQL Server Management Studio (SSMS) para ejecutar los scripts.
-- Base de datos: `BASAV_TTII`, con las tablas `Stg_TTII_Raw` (staging), `Dim_Fecha`, `Fact_TTII` y las copias de prueba `Exp01_Rowstore` y `Exp01_Columnstore`.
-- Excel para contrastar totales de forma independiente. Power BI Desktop y Visual Studio están previstos para el dashboard y el generador sintético.
+| Componente | Versión |
+|---|---|
+| SQL Server (Developer, 64 bits) | 2022, 16.0.4255.1 (RTM-CU25) |
+| Imagen de Docker | `mcr.microsoft.com/mssql/server:2022-latest`, ID `e07b9699a2b7` |
+| Docker | 29.4.3 (build 055a478) |
+| SQL Server Management Studio (SSMS) | 22.6.0 |
+| Microsoft Excel | 16.0.20527.20088 |
+| Sistema operativo | Windows, versión 10.0.26200 |
+| Power BI Desktop y Visual Studio | Previstos para el dashboard y el generador sintético; se registrarán sus versiones al usarlos |
+
+La etiqueta `2022-latest` de la imagen cambia cuando Microsoft publica actualizaciones; por eso se registran el ID de la imagen y la versión exacta del motor.
+
+Base de datos: `BASAV_TTII`, con las tablas `Stg_TTII_Raw` (staging), `Dim_Fecha`, `Fact_TTII` y las copias de prueba `Exp01_Rowstore` y `Exp01_Columnstore`.
+
+### Levantar SQL Server en Docker (comando de referencia)
+
+```
+docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=<TU_CONTRASEÑA>" -p 1433:1433 --name sqlserver -d mcr.microsoft.com/mssql/server:2022-latest
+```
+
+La contraseña no se incluye en el repositorio. Debe cumplir la política de contraseñas de SQL Server (mínimo 8 caracteres, con mayúsculas, minúsculas, números y símbolos). Luego se conecta SSMS a `localhost,1433` con el usuario `sa`.
 
 ## Cómo reproducir EXP-01
 
@@ -61,6 +78,10 @@ El archivo `.gitignore` bloquea extensiones de datos (`.xlsx`, `.csv`, `.bak`, `
 ## Uso de inteligencia artificial
 
 Se utilizó Claude (Anthropic) como apoyo en la redacción del informe, la organización del proyecto y la elaboración de scripts T-SQL. El autor revisó y ejecutó los scripts y verificó los resultados en su propio entorno. No se ingresaron datos operativos identificables en herramientas de IA.
+
+## Licencia
+
+Material académico desarrollado para el curso Base de Datos Avanzadas y Big Data (UPN, 2026-2). Todos los derechos reservados por el autor.
 
 ## Licencia
 
