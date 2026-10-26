@@ -426,3 +426,11 @@ FodyWeavers.xsd
 
 # Official VS Code C# Dev Kit Extension exclusion
 #*.lscache
+ 
+# Datos y archivos que no se publican 
+*.xlsx 
+*.csv 
+*.bak 
+*.mdf 
+*.ldf 
+.env 
