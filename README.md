@@ -1,88 +1,193 @@
 # Solución de Inteligencia de Negocios y Big Data para el monitoreo de traslados entre almacenes
 
-Proyecto final del curso **Base de Datos Avanzadas y Big Data** (NRC 23814), periodo 2026-2.
-Carrera de Ingeniería de Sistemas Computacionales, Universidad Privada del Norte (UPN).
+## 1. Información del proyecto
 
-| | |
+- **Curso:** Base de Datos Avanzadas y Big Data
+- **NRC:** 23814
+- **Periodo:** 2026-2
+- **Universidad:** Universidad Privada del Norte (UPN)
+- **Carrera:** Ingeniería de Sistemas Computacionales
+- **Autor:** Gabriel Alejandro Quispe Vasquez
+- **Docente:** Ramirez Visa Adan Elvis
+- **Participación:** 100 %
+- **Versión de referencia:** `v0.1-cap-iv`
+
+## 2. Descripción del proyecto
+
+Proyecto académico orientado al diseño e implementación de una solución de inteligencia de negocios para el monitoreo de traslados entre almacenes.
+
+La solución utiliza Microsoft SQL Server para almacenar, transformar, validar y analizar información de traslados internos. El modelo trabaja con cinco variables del conjunto de datos: Peso, Pallets, Volumen, Bultos y Fecha de creación.
+
+La implementación contempla procesos ETL, un modelo dimensional, estructuras de almacenamiento Rowstore y Columnstore, consultas de indicadores y experimentación sobre el rendimiento de las estructuras de datos.
+
+El entorno de ejecución es local y no contempla un clúster distribuido.
+
+## 3. Estado de implementación
+
+| Componente | Estado |
 |---|---|
-| **Autor** | Gabriel Alejandro Quispe Vasquez (participación: 100 %) |
-| **Docente** | Ramirez Visa Adan Elvis |
-| **Versión actual** | `v0.1-cap-iv` (avance hasta el Capítulo IV del informe) |
-| **Repositorio** | https://github.com/Alejandro-QV/basav-bi-traslados-almacenes |
+| Diseño de la solución | Implementado |
+| Base de datos BASAV_TTII | Implementada |
+| Modelo dimensional | Implementado |
+| Proceso ETL | Implementado y ejecutado |
+| Validación de staging | Ejecutada |
+| Conciliación de datos | Ejecutada |
+| Indicadores por turno | Implementados |
+| Indicadores diarios y mensuales | Implementados |
+| Experimento Rowstore vs. Columnstore | Implementación preliminar |
+| Generación de datos sintéticos para EXP-02 | Pendiente de implementación |
+| EXP-02 | Pendiente |
+| EXP-03 | Pendiente |
+| Dashboard Power BI | Pendiente de desarrollo |
 
-## Descripción
+## 4. Implementación ETL
 
-El proyecto propone una solución de inteligencia de negocios para resumir viajes de programación entre almacenes por **fecha y turno**, usando cinco variables: Peso, Pallets, Volumen, Bultos y Fecha de creación. SQL Server centraliza la preparación y agregación de los datos, Power BI presentará los indicadores, y se evalúa el rendimiento con registros sintéticos de volumen creciente (10 000, 100 000 y 1 000 000 de filas).
+La base de datos `BASAV_TTII` contiene los siguientes objetos programables:
 
-La implementación es **local en SQL Server**; no se construye un clúster distribuido.
+**Función**
+- `fn_turno`
 
-## Estructura del repositorio
+**Procedimientos almacenados**
+- `sp_etl_cargar_dimensiones`
+- `sp_etl_cargar_hechos`
+- `sp_etl_conciliar`
+- `sp_etl_orquestar`
+- `sp_etl_validar_staging`
 
-| Carpeta | Contenido |
+**Trigger**
+- `trg_auditoria_fact_traslado`
+
+**Vistas**
+- `vw_Indicadores_Diarios`
+- `vw_Indicadores_Mensuales`
+- `vw_kpi_turno`
+
+Las definiciones de estos objetos se encuentran implementadas en la base de datos local. Sus scripts de creación todavía están pendientes de incorporarse al repositorio para permitir la reproducción desde una instancia nueva.
+
+### 4.1. Última ejecución verificada
+
+| Indicador | Resultado |
+|---|---:|
+| Registros en staging | 7,457 |
+| Registros en Fact_TTII | 7,457 |
+| Registros conciliados | 7,457 |
+| Fechas en Dim_Fecha | 67 |
+| Advertencias | 6 |
+| Errores | 0 |
+| Diferencia de peso | 0.0000 toneladas |
+
+**Estado de ejecución:** `EJECUTADO_CON_ADVERTENCIAS`.
+
+**Estado de conciliación:** `CONCILIADO`.
+
+Se identificaron tres registros sin fecha de creación y sin valor de bultos. Estas condiciones fueron registradas como advertencias y no impidieron la conciliación de los registros ni de los totales de peso.
+
+La conciliación verifica conteos, identificadores, registros faltantes, valores nulos y peso total. No representa una comparación exhaustiva de todas las columnas a nivel individual.
+
+## 5. Experimento EXP-01: Rowstore y Columnstore
+
+El experimento compara dos estructuras de almacenamiento:
+
+- `Exp01_Rowstore`
+- `Exp01_Columnstore`
+
+Se implementaron consultas para:
+
+- Verificar los tipos de índices de ambas estructuras.
+- Comparar la cantidad de registros.
+- Comprobar la igualdad de los agregados de peso, pallets, volumen y bultos.
+- Medir 500 ejecuciones repetidas de una consulta de conteo.
+- Realizar agregaciones mensuales mediante la relación con `Dim_Fecha`.
+
+Las mediciones de rendimiento son preliminares. Los tiempos pueden variar según las condiciones de ejecución, la caché y la carga del entorno.
+
+Las consultas de agregación mensual utilizan una unión interna con `Dim_Fecha`, por lo que excluyen los registros sin fecha de creación.
+
+Los resultados experimentales deben interpretarse considerando estas condiciones y las evidencias correspondientes.
+
+## 6. Tecnologías y entorno
+
+| Tecnología | Versión / Uso |
 |---|---|
-| `sql/` | Scripts T-SQL: perfilado del dataset (`04_...`) y experimento EXP-01 Rowstore vs Columnstore (`05_...`). Los scripts de DDL y ETL (`02_...`, `03_...`) se agregarán en una próxima versión. |
-| `evidencias/` | Capturas de SSMS con código de evidencia (E-02, E-04, E-06, E-10), referenciadas en el informe. |
-| `entorno/` | Configuración del entorno de ejecución (por completar). |
-| `generador/` | Generador de datos sintéticos para EXP-02 (pendiente). |
-| `resultados/` | Logs y tablas de métricas de las ejecuciones. |
-| `data/` | Sin datos. Ver la sección de privacidad. |
-| `docs/` | Documentación del modelo (diagrama y diccionario de datos, pendientes). |
-
-## Entorno y dependencias
-
-| Componente | Versión |
-|---|---|
-| SQL Server (Developer, 64 bits) | 2022, 16.0.4255.1 (RTM-CU25) |
-| Imagen de Docker | `mcr.microsoft.com/mssql/server:2022-latest`, ID `e07b9699a2b7` |
+| Microsoft SQL Server 2022 Developer | 16.0.4255.1 (RTM-CU25) |
+| Imagen Docker | `mcr.microsoft.com/mssql/server:2022-latest` |
 | Docker | 29.4.3 (build 055a478) |
-| SQL Server Management Studio (SSMS) | 22.6.0 |
+| SQL Server Management Studio | 22.6.0 |
 | Microsoft Excel | 16.0.20527.20088 |
-| Sistema operativo | Windows, versión 10.0.26200 |
-| Power BI Desktop y Visual Studio | Previstos para el dashboard y el generador sintético; se registrarán sus versiones al usarlos |
+| Windows | Versión 10.0.26200 |
+| Power BI Desktop | Instalado; dashboard pendiente de desarrollo |
 
-La etiqueta `2022-latest` de la imagen cambia cuando Microsoft publica actualizaciones; por eso se registran el ID de la imagen y la versión exacta del motor.
+El proyecto se desarrolla en un entorno local de Windows, con SQL Server ejecutándose mediante Docker.
 
-Base de datos: `BASAV_TTII`, con las tablas `Stg_TTII_Raw` (staging), `Dim_Fecha`, `Fact_TTII` y las copias de prueba `Exp01_Rowstore` y `Exp01_Columnstore`.
+La etiqueta `2022-latest` de la imagen Docker puede cambiar cuando Microsoft publica actualizaciones. Por ello, también se registra la versión del motor SQL Server utilizada durante el desarrollo.
 
-### Levantar SQL Server en Docker (comando de referencia)
+## 7. Estructura del repositorio
 
+```text
+basav-bi-traslados-almacenes/
+├── data/
+│   └── README.md
+├── entorno/
+│   └── .gitkeep
+├── evidencias/
+│   ├── E-02_fig2_estructura_tablas.png
+│   ├── E-04_fig5_entorno.png
+│   ├── E-06_fig6_tipo_indice.png
+│   └── E-10_fig8_tiempos_500_ejecuciones.png
+├── generador/
+│   └── .gitkeep
+├── resultados/
+│   └── .gitkeep
+├── sql/
+│   ├── 04_consultas_perfilado.sql
+│   └── 05_exp01_rowstore_columnstore.sql
+├── .gitignore
+└── README.md
 ```
-docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=<TU_CONTRASEÑA>" -p 1433:1433 --name sqlserver -d mcr.microsoft.com/mssql/server:2022-latest
-```
 
-La contraseña no se incluye en el repositorio. Debe cumplir la política de contraseñas de SQL Server (mínimo 8 caracteres, con mayúsculas, minúsculas, números y símbolos). Luego se conecta SSMS a `localhost,1433` con el usuario `sa`.
+La estructura se actualizará conforme se incorporen los scripts DDL, ETL, generación de datos sintéticos y documentación técnica.
 
-## Cómo reproducir EXP-01
+## 8. Reproducción
 
-1. Conectar SSMS a la instancia local de SQL Server y seleccionar la base `BASAV_TTII`.
-2. Ejecutar `sql/04_consultas_perfilado.sql` para verificar entorno, estructura, conteos y distribución por turno.
-3. Ejecutar `sql/05_exp01_rowstore_columnstore.sql` para comparar los tipos de índice, verificar la igualdad de agregados y medir 500 ejecuciones de la consulta de conteo en cada estructura. Cada bloque de la medición se ejecuta por separado.
+Para ejecutar las consultas actualmente disponibles se requiere una instancia de SQL Server 2022 Developer y una base de datos `BASAV_TTII` previamente preparada con sus tablas y objetos.
 
-Los tiempos varían entre ejecuciones y no se controla el estado de la caché; los resultados se interpretan como preliminares (ver sección 4.7 del informe).
+Pasos:
 
-## Estado del proyecto
+1. Configurar SQL Server 2022 Developer en el entorno local.
+2. Conectar SQL Server Management Studio a la instancia correspondiente.
+3. Seleccionar la base de datos `BASAV_TTII`.
+4. Ejecutar `sql/04_consultas_perfilado.sql` para verificar el entorno, la estructura, los conteos y la distribución por turno.
+5. Ejecutar `sql/05_exp01_rowstore_columnstore.sql` para revisar los índices, comparar agregados, medir las 500 ejecuciones y realizar las agregaciones mensuales.
+6. Revisar los resultados obtenidos y las evidencias disponibles en la carpeta `evidencias/`.
 
-- [x] Diseño de las soluciones y del experimento (Capítulos I a IV)
-- [x] EXP-01: comparación preliminar Rowstore vs Columnstore sobre el dataset de trabajo
-- [ ] Scripts de creación del modelo y de carga (ETL)
-- [ ] EXP-02: carga y agregación sobre datos sintéticos
-- [ ] EXP-03: flujo integrado y actualización del dashboard
-- [ ] Dashboard en Power BI
+La reproducción completa desde una base de datos vacía todavía está pendiente de incorporar los scripts de creación del modelo, los objetos ETL y la carga de datos.
 
-## Privacidad y datos
+## 9. Privacidad de los datos
 
-El dataset original **no se publica**. El análisis usa un archivo depurado que conserva solo cinco campos numéricos y temporales; se excluyen nombres de personas, placas, transportistas y cualquier identificador. Este repositorio contiene scripts y evidencias que no incluyen datos operativos identificables. Las pruebas de volumen usan datos sintéticos generados por scripts.
+El conjunto de datos original no se publica en este repositorio por motivos de confidencialidad.
 
-El archivo `.gitignore` bloquea extensiones de datos (`.xlsx`, `.csv`, `.bak`, `.mdf`, `.ldf`).
+El proyecto trabaja con las variables Peso, Pallets, Volumen, Bultos y Fecha de creación. Se excluyen nombres de personas, placas, transportistas y otros identificadores operativos.
 
-## Uso de inteligencia artificial
+Los archivos originales de datos no deben incorporarse al repositorio.
 
-Se utilizó Claude (Anthropic) como apoyo en la redacción del informe, la organización del proyecto y la elaboración de scripts T-SQL. El autor revisó y ejecutó los scripts y verificó los resultados en su propio entorno. No se ingresaron datos operativos identificables en herramientas de IA.
+Los datos sintéticos para las pruebas de volumen de EXP-02 se generarán mediante scripts T-SQL que se incorporarán al repositorio durante la implementación de dicho experimento.
 
-## Licencia
+## 10. Uso de herramientas de inteligencia artificial
 
-Material académico desarrollado para el curso Base de Datos Avanzadas y Big Data (UPN, 2026-2). Todos los derechos reservados por el autor.
+Se utilizaron herramientas de inteligencia artificial como apoyo para la redacción del informe, la organización del proyecto y la elaboración y revisión de componentes T-SQL.
 
-## Licencia
+El autor es responsable de revisar, ejecutar y validar las implementaciones y los resultados presentados.
 
-Material académico desarrollado para el curso Base de Datos Avanzadas y Big Data (UPN, 2026-2). Todos los derechos reservados por el autor.
+No se incorporaron datos operativos identificables en las consultas realizadas a herramientas de inteligencia artificial.
+
+## 11. Licencia
+
+Material académico desarrollado para el curso Base de Datos Avanzadas y Big Data de la Universidad Privada del Norte (UPN), periodo 2026-2.
+
+Todos los derechos reservados por el autor.
+
+---
+
+**Repositorio:** https://github.com/Alejandro-QV/basav-bi-traslados-almacenes
+
+**Versión de referencia:** `v0.1-cap-iv`

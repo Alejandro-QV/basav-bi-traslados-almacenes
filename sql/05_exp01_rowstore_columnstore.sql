@@ -1,66 +1,187 @@
+
 /* =============================================================
    05_exp01_rowstore_columnstore.sql
-   Proyecto final BASAV 2026-2 - Base de datos BASAV_TTII
-   Proposito : EXP-01, comparacion preliminar Rowstore vs
-               Clustered Columnstore sobre las mismas columnas
-   Evidencias: E-06 (Figura 6), E-07 (Figura 7), E-10 (Figura 8)
+
+   Proyecto: BASAV - Inteligencia de Negocios y Big Data
+   Base de datos: BASAV_TTII
+   Experimento: EXP-01 - Comparacion Rowstore vs Columnstore
+
+   Objetivos:
+   1. Verificar los indices de ambas estructuras.
+   2. Comparar cantidad de registros y agregados.
+   3. Medir 500 ejecuciones de consultas de conteo.
+   4. Comparar agregaciones mensuales.
+   5. Obtener estadisticas de CPU, tiempo e IO.
+
+   Evidencias:
+   E-06: Tipo de indice.
+   E-07: Comparacion de registros y agregados.
+   E-10: Tiempos de ejecucion de 500 consultas.
+
    Responsable: G. A. Quispe Vasquez
-   Nota      : los tiempos varian entre ejecuciones; no se
-               controla el estado de cache (ver seccion 4.7).
+
+   Nota:
+   Los resultados dependen de las condiciones de ejecucion,
+   la cache y la carga del entorno.
    ============================================================= */
+
 USE BASAV_TTII;
 GO
 
--- E-06 / Figura 6: tipo de indice de cada tabla de prueba
-SELECT OBJECT_NAME(object_id) AS tabla, type_desc AS tipo_indice, name
+/* =============================================================
+   1. E-06: VERIFICACION DE INDICES
+   ============================================================= */
+
+SELECT
+    OBJECT_NAME(object_id) AS tabla,
+    type_desc AS tipo_indice,
+    name AS nombre_indice
 FROM sys.indexes
-WHERE object_id IN (OBJECT_ID('dbo.Exp01_Rowstore'), OBJECT_ID('dbo.Exp01_Columnstore'));
+WHERE object_id IN (
+    OBJECT_ID('dbo.Exp01_Rowstore'),
+    OBJECT_ID('dbo.Exp01_Columnstore')
+)
+ORDER BY tabla, index_id;
 GO
 
--- E-07 / Figura 7: igualdad de conteos y agregados entre estructuras
-SELECT 'Rowstore' AS est, COUNT(*) AS filas, SUM(PesoToneladas) AS peso_ton,
-       SUM(Pallets) AS pallets, SUM(Volumen) AS volumen, SUM(Bultos) AS bultos
+/* =============================================================
+   2. E-07: COMPARACION DE REGISTROS Y AGREGADOS
+   ============================================================= */
+
+SELECT
+    'Rowstore' AS estructura,
+    COUNT_BIG(*) AS filas,
+    SUM(PesoToneladas) AS peso_toneladas,
+    SUM(Pallets) AS pallets,
+    SUM(Volumen) AS volumen,
+    SUM(Bultos) AS bultos
 FROM dbo.Exp01_Rowstore
+
 UNION ALL
-SELECT 'Columnstore', COUNT(*), SUM(PesoToneladas), SUM(Pallets), SUM(Volumen), SUM(Bultos)
+
+SELECT
+    'Columnstore',
+    COUNT_BIG(*),
+    SUM(PesoToneladas),
+    SUM(Pallets),
+    SUM(Volumen),
+    SUM(Bultos)
 FROM dbo.Exp01_Columnstore;
 GO
 
--- E-10 / Figura 8: 500 ejecuciones de la consulta de conteo (ejecutar cada bloque por separado)
--- Bloque Rowstore
-DECLARE @i INT = 0, @c INT, @t0 DATETIME2 = SYSDATETIME();
-WHILE @i < 500 BEGIN SELECT @c = COUNT(*) FROM dbo.Exp01_Rowstore; SET @i += 1; END
-SELECT 'Rowstore' AS est,
-       DATEDIFF_BIG(MICROSECOND, @t0, SYSDATETIME())         AS total_us,
-       DATEDIFF_BIG(MICROSECOND, @t0, SYSDATETIME()) / 500.0 AS prom_us;
+/* =============================================================
+   3. E-10: MEDICION DE 500 EJECUCIONES - ROWSTORE
+   ============================================================= */
+
+DECLARE
+    @i INT = 0,
+    @c BIGINT,
+    @t0 DATETIME2(7) = SYSDATETIME(),
+    @fin DATETIME2(7);
+
+WHILE @i < 500
+BEGIN
+    SELECT @c = COUNT_BIG(*)
+    FROM dbo.Exp01_Rowstore;
+
+    SET @i += 1;
+END;
+
+SET @fin = SYSDATETIME();
+
+SELECT
+    'Rowstore' AS estructura,
+    500 AS ejecuciones,
+    DATEDIFF_BIG(MICROSECOND, @t0, @fin) AS tiempo_total_us,
+    CAST(
+        DATEDIFF_BIG(MICROSECOND, @t0, @fin) / 500.0
+        AS DECIMAL(18,2)
+    ) AS promedio_us;
 GO
 
--- Bloque Columnstore
-DECLARE @j INT = 0, @d INT, @t1 DATETIME2 = SYSDATETIME();
-WHILE @j < 500 BEGIN SELECT @d = COUNT(*) FROM dbo.Exp01_Columnstore; SET @j += 1; END
-SELECT 'Columnstore' AS est,
-       DATEDIFF_BIG(MICROSECOND, @t1, SYSDATETIME())         AS total_us,
-       DATEDIFF_BIG(MICROSECOND, @t1, SYSDATETIME()) / 500.0 AS prom_us;
+/* =============================================================
+   4. E-10: MEDICION DE 500 EJECUCIONES - COLUMNSTORE
+   ============================================================= */
+
+DECLARE
+    @j INT = 0,
+    @d BIGINT,
+    @t1 DATETIME2(7) = SYSDATETIME(),
+    @fin2 DATETIME2(7);
+
+WHILE @j < 500
+BEGIN
+    SELECT @d = COUNT_BIG(*)
+    FROM dbo.Exp01_Columnstore;
+
+    SET @j += 1;
+END;
+
+SET @fin2 = SYSDATETIME();
+
+SELECT
+    'Columnstore' AS estructura,
+    500 AS ejecuciones,
+    DATEDIFF_BIG(MICROSECOND, @t1, @fin2) AS tiempo_total_us,
+    CAST(
+        DATEDIFF_BIG(MICROSECOND, @t1, @fin2) / 500.0
+        AS DECIMAL(18,2)
+    ) AS promedio_us;
 GO
 
--- PENDIENTE DE EJECUTAR: agregacion mensual en ambas estructuras.
--- Las tablas Exp01_* tienen FechaKey (no FechaCreacion), por eso se une con Dim_Fecha.
--- El JOIN interno excluye los registros sin fecha.
+/* =============================================================
+   5. AGREGACION MENSUAL - ROWSTORE
+   ============================================================= */
+
+SET STATISTICS IO ON;
 SET STATISTICS TIME ON;
 
-SELECT d.Anio, d.Mes, COUNT(*) AS viajes,
-       SUM(f.PesoToneladas) AS peso_ton, SUM(f.Pallets) AS pallets,
-       SUM(f.Volumen) AS volumen, SUM(f.Bultos) AS bultos
-FROM dbo.Exp01_Rowstore f
-JOIN dbo.Dim_Fecha d ON d.FechaKey = f.FechaKey
-GROUP BY d.Anio, d.Mes ORDER BY d.Anio, d.Mes;
+SELECT
+    d.Anio,
+    d.Mes,
+    COUNT_BIG(*) AS viajes,
+    SUM(f.PesoToneladas) AS peso_toneladas,
+    SUM(f.Pallets) AS pallets,
+    SUM(f.Volumen) AS volumen,
+    SUM(f.Bultos) AS bultos
+FROM dbo.Exp01_Rowstore AS f
+INNER JOIN dbo.Dim_Fecha AS d
+    ON d.FechaKey = f.FechaKey
+GROUP BY
+    d.Anio,
+    d.Mes
+ORDER BY
+    d.Anio,
+    d.Mes;
+GO
 
-SELECT d.Anio, d.Mes, COUNT(*) AS viajes,
-       SUM(f.PesoToneladas) AS peso_ton, SUM(f.Pallets) AS pallets,
-       SUM(f.Volumen) AS volumen, SUM(f.Bultos) AS bultos
-FROM dbo.Exp01_Columnstore f
-JOIN dbo.Dim_Fecha d ON d.FechaKey = f.FechaKey
-GROUP BY d.Anio, d.Mes ORDER BY d.Anio, d.Mes;
+/* =============================================================
+   6. AGREGACION MENSUAL - COLUMNSTORE
+   ============================================================= */
+
+SELECT
+    d.Anio,
+    d.Mes,
+    COUNT_BIG(*) AS viajes,
+    SUM(f.PesoToneladas) AS peso_toneladas,
+    SUM(f.Pallets) AS pallets,
+    SUM(f.Volumen) AS volumen,
+    SUM(f.Bultos) AS bultos
+FROM dbo.Exp01_Columnstore AS f
+INNER JOIN dbo.Dim_Fecha AS d
+    ON d.FechaKey = f.FechaKey
+GROUP BY
+    d.Anio,
+    d.Mes
+ORDER BY
+    d.Anio,
+    d.Mes;
+GO
 
 SET STATISTICS TIME OFF;
+SET STATISTICS IO OFF;
 GO
+
+/* =============================================================
+   FIN DEL EXPERIMENTO EXP-01
+   ============================================================= */
