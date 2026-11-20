@@ -1,9 +1,5 @@
-Esta carpeta no contiene archivos de datos.
+# Datos
 
+El conjunto original no se publica por confidencialidad. El modelo utiliza cinco variables: Peso, Pallets, Volumen, Bultos y Fecha de creación.
 
-
-El conjunto de datos original no se publica por motivos de confidencialidad.
-
-
-
-Los datos sintéticos para las pruebas de volumen de EXP-02 se generarán mediante scripts T-SQL que se incorporarán al repositorio en una actualización posterior.
+No incorporar archivos originales `.xlsx`, `.csv`, respaldos ni identificadores operativos. EXP-02 utiliza datos sintéticos generados en el entorno SQL para evaluar la escalabilidad; no se distribuyen archivos de datos fuente ni datos operativos reales.

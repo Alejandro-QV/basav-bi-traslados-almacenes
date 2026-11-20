@@ -1,193 +1,145 @@
-# Solución de Inteligencia de Negocios y Big Data para el monitoreo de traslados entre almacenes
+# BASAV-TTII: Inteligencia de Negocios y Big Data para el monitoreo de traslados entre almacenes
 
-## 1. Información del proyecto
+Proyecto académico desarrollado para el curso **Base de Datos Avanzadas y Big Data** de la Universidad Privada del Norte (UPN), periodo 2026-2.
 
+## Información del proyecto
+
+- **Autor:** Gabriel Alejandro Quispe Vasquez
 - **Curso:** Base de Datos Avanzadas y Big Data
 - **NRC:** 23814
 - **Periodo:** 2026-2
 - **Universidad:** Universidad Privada del Norte (UPN)
 - **Carrera:** Ingeniería de Sistemas Computacionales
-- **Autor:** Gabriel Alejandro Quispe Vasquez
-- **Docente:** Ramirez Visa Adan Elvis
-- **Participación:** 100 %
-- **Versión de referencia:** `v0.1-cap-iv`
+- **Versión de avance anterior:** `v0.1-cap-iv`
 
-## 2. Descripción del proyecto
+## Descripción
 
-Proyecto académico orientado al diseño e implementación de una solución de inteligencia de negocios para el monitoreo de traslados entre almacenes.
+Solución académica de inteligencia de negocios para analizar traslados entre almacenes mediante SQL Server, procesos ETL, un modelo dimensional, consultas de indicadores y experimentos de rendimiento y escalabilidad.
 
-La solución utiliza Microsoft SQL Server para almacenar, transformar, validar y analizar información de traslados internos. El modelo trabaja con cinco variables del conjunto de datos: Peso, Pallets, Volumen, Bultos y Fecha de creación.
+El conjunto de trabajo utiliza cinco variables: **Peso, Pallets, Volumen, Bultos y Fecha de creación**. El procesamiento se ejecutó en un entorno local; el proyecto no implementa un clúster distribuido.
 
-La implementación contempla procesos ETL, un modelo dimensional, estructuras de almacenamiento Rowstore y Columnstore, consultas de indicadores y experimentación sobre el rendimiento de las estructuras de datos.
+## Estado de implementación
 
-El entorno de ejecución es local y no contempla un clúster distribuido.
-
-## 3. Estado de implementación
-
-| Componente | Estado |
+| Componente | Estado documentado |
 |---|---|
-| Diseño de la solución | Implementado |
-| Base de datos BASAV_TTII | Implementada |
+| Base de datos `BASAV_TTII` | Implementada |
 | Modelo dimensional | Implementado |
-| Proceso ETL | Implementado y ejecutado |
-| Validación de staging | Ejecutada |
-| Conciliación de datos | Ejecutada |
-| Indicadores por turno | Implementados |
-| Indicadores diarios y mensuales | Implementados |
-| Experimento Rowstore vs. Columnstore | Implementación preliminar |
-| Generación de datos sintéticos para EXP-02 | Pendiente de implementación |
-| EXP-02 | Pendiente |
-| EXP-03 | Pendiente |
-| Dashboard Power BI | Pendiente de desarrollo |
+| ETL y validación de staging | Ejecutados |
+| Conciliación | Ejecutada; resultado registrado `CONCILIADO` |
+| Indicadores diarios, mensuales y por turno | Implementados |
+| EXP-01 Rowstore vs. Columnstore | Ejecutado; resultados formales registrados |
+| EXP-02 escalabilidad sintética | Ejecutado; tres escalas registradas |
+| EXP-03 ETL integrado | Ejecutado; seis ejecuciones formales registradas |
+| Dashboard Power BI | Implementado; tres páginas documentadas en el informe |
 
-## 4. Implementación ETL
+## Resultados verificados
 
-La base de datos `BASAV_TTII` contiene los siguientes objetos programables:
+### ETL
 
-**Función**
-- `fn_turno`
+- 7,457 registros en staging.
+- 7,457 registros en `Fact_TTII`.
+- 67 registros en `Dim_Fecha`.
+- Última ejecución revisada: `EJECUTADO_CON_ADVERTENCIAS`.
+- 58 incidencias/advertencias y 0 errores en el registro revisado.
+- Resultado de conciliación: `CONCILIADO`.
+- Se registró la advertencia `BULTOS_ALTO` para valores mayores a 10,000 (p99 = 8,910); esos valores se conservaron en el KPI.
 
-**Procedimientos almacenados**
-- `sp_etl_cargar_dimensiones`
-- `sp_etl_cargar_hechos`
-- `sp_etl_conciliar`
-- `sp_etl_orquestar`
-- `sp_etl_validar_staging`
+### EXP-01
 
-**Trigger**
-- `trg_auditoria_fact_traslado`
+Promedios de las pruebas formales registradas, con 500 ejecuciones por condición:
 
-**Vistas**
-- `vw_Indicadores_Diarios`
-- `vw_Indicadores_Mensuales`
-- `vw_kpi_turno`
+| Consulta | Rowstore | Columnstore |
+|---|---:|---:|
+| Conteo | 579.72 µs | 157.37 µs |
+| Agregación mensual | 6,374.89 µs | 784.14 µs |
 
-Las definiciones de estos objetos se encuentran implementadas en la base de datos local. Sus scripts de creación todavía están pendientes de incorporarse al repositorio para permitir la reproducción desde una instancia nueva.
+Columnstore registró un tiempo promedio aproximadamente 72.9% menor en conteo y 87.7% menor en agregación mensual, bajo las condiciones medidas. Los resultados no deben generalizarse a otras consultas o entornos.
 
-### 4.1. Última ejecución verificada
+### EXP-02
 
-| Indicador | Resultado |
-|---|---:|
-| Registros en staging | 7,457 |
-| Registros en Fact_TTII | 7,457 |
-| Registros conciliados | 7,457 |
-| Fechas en Dim_Fecha | 67 |
-| Advertencias | 6 |
-| Errores | 0 |
-| Diferencia de peso | 0.0000 toneladas |
+| Escala generada | Válidas | Rechazadas |
+|---:|---:|---:|
+| 10,000 | 9,857 | 143 |
+| 100,000 | 98,517 | 1,483 |
+| 1,000,000 | 985,063 | 14,937 |
 
-**Estado de ejecución:** `EJECUTADO_CON_ADVERTENCIAS`.
+Las 18 ejecuciones formales revisadas registraron estado `OK` y coincidencia de conteos y agregados.
 
-**Estado de conciliación:** `CONCILIADO`.
+### EXP-03
 
-Se identificaron tres registros sin fecha de creación y sin valor de bultos. Estas condiciones fueron registradas como advertencias y no impidieron la conciliación de los registros ni de los totales de peso.
+Se revisaron seis ejecuciones formales con estado `OK`; todas registraron 7,457 filas en staging y hechos, coincidencia de filas y coincidencia con EXP-01.
 
-La conciliación verifica conteos, identificadores, registros faltantes, valores nulos y peso total. No representa una comparación exhaustiva de todas las columnas a nivel individual.
+El detalle se encuentra en [`resultados/README.md`](resultados/README.md).
 
-## 5. Experimento EXP-01: Rowstore y Columnstore
-
-El experimento compara dos estructuras de almacenamiento:
-
-- `Exp01_Rowstore`
-- `Exp01_Columnstore`
-
-Se implementaron consultas para:
-
-- Verificar los tipos de índices de ambas estructuras.
-- Comparar la cantidad de registros.
-- Comprobar la igualdad de los agregados de peso, pallets, volumen y bultos.
-- Medir 500 ejecuciones repetidas de una consulta de conteo.
-- Realizar agregaciones mensuales mediante la relación con `Dim_Fecha`.
-
-Las mediciones de rendimiento son preliminares. Los tiempos pueden variar según las condiciones de ejecución, la caché y la carga del entorno.
-
-Las consultas de agregación mensual utilizan una unión interna con `Dim_Fecha`, por lo que excluyen los registros sin fecha de creación.
-
-Los resultados experimentales deben interpretarse considerando estas condiciones y las evidencias correspondientes.
-
-## 6. Tecnologías y entorno
-
-| Tecnología | Versión / Uso |
-|---|---|
-| Microsoft SQL Server 2022 Developer | 16.0.4255.1 (RTM-CU25) |
-| Imagen Docker | `mcr.microsoft.com/mssql/server:2022-latest` |
-| Docker | 29.4.3 (build 055a478) |
-| SQL Server Management Studio | 22.6.0 |
-| Microsoft Excel | 16.0.20527.20088 |
-| Windows | Versión 10.0.26200 |
-| Power BI Desktop | Instalado; dashboard pendiente de desarrollo |
-
-El proyecto se desarrolla en un entorno local de Windows, con SQL Server ejecutándose mediante Docker.
-
-La etiqueta `2022-latest` de la imagen Docker puede cambiar cuando Microsoft publica actualizaciones. Por ello, también se registra la versión del motor SQL Server utilizada durante el desarrollo.
-
-## 7. Estructura del repositorio
+## Estructura del repositorio
 
 ```text
 basav-bi-traslados-almacenes/
 ├── data/
 │   └── README.md
 ├── entorno/
-│   └── .gitkeep
+│   └── README.md
 ├── evidencias/
 │   ├── E-02_fig2_estructura_tablas.png
 │   ├── E-04_fig5_entorno.png
 │   ├── E-06_fig6_tipo_indice.png
-│   └── E-10_fig8_tiempos_500_ejecuciones.png
+│   ├── E-10_fig8_tiempos_500_ejecuciones.png
+│   └── README.md
 ├── generador/
-│   └── .gitkeep
 ├── resultados/
-│   └── .gitkeep
+│   └── README.md
 ├── sql/
-│   ├── 04_consultas_perfilado.sql
-│   └── 05_exp01_rowstore_columnstore.sql
-├── .gitignore
+│   ├── 02_trigger_auditoria.sql
+│   ├── consultas/
+│   │   └── 03_consultas_perfilado.sql
+│   ├── experimentos/
+│   │   └── 05_exp01_rowstore_columnstore.sql
+│   └── legacy/
+│       ├── 04_consultas_perfilado_raiz_anterior.sql
+│       ├── 05_exp01_rowstore_columnstore_anterior.sql
+│       └── SQLServer_BASAV_inicio_antecedente.sql
 └── README.md
 ```
 
-La estructura se actualizará conforme se incorporen los scripts DDL, ETL, generación de datos sintéticos y documentación técnica.
+Los archivos existentes `generador/` y las evidencias históricas se conservan al aplicar esta actualización.
 
-## 8. Reproducción
+La exportación completa de la estructura de la instancia se conserva únicamente como referencia local y no se distribuye en este repositorio.
 
-Para ejecutar las consultas actualmente disponibles se requiere una instancia de SQL Server 2022 Developer y una base de datos `BASAV_TTII` previamente preparada con sus tablas y objetos.
+## Scripts SQL
 
-Pasos:
+- `sql/02_trigger_auditoria.sql`: trigger de auditoría. Requiere que existan `Fact_TTII` y `Log_Auditoria_Fact_TTII`.
+- `sql/consultas/03_consultas_perfilado.sql`: consultas de entorno, estructura, conteos, nulos y distribución por turno.
+- `sql/experimentos/05_exp01_rowstore_columnstore.sql`: medición de las estructuras Rowstore y Columnstore; no reconstruye ni elimina tablas.
+- `sql/legacy/SQLServer_BASAV_inicio_antecedente.sql`: script inicial de staging e importación, conservado como antecedente histórico; no representa el ETL final.
 
-1. Configurar SQL Server 2022 Developer en el entorno local.
-2. Conectar SQL Server Management Studio a la instancia correspondiente.
-3. Seleccionar la base de datos `BASAV_TTII`.
-4. Ejecutar `sql/04_consultas_perfilado.sql` para verificar el entorno, la estructura, los conteos y la distribución por turno.
-5. Ejecutar `sql/05_exp01_rowstore_columnstore.sql` para revisar los índices, comparar agregados, medir las 500 ejecuciones y realizar las agregaciones mensuales.
-6. Revisar los resultados obtenidos y las evidencias disponibles en la carpeta `evidencias/`.
+Los scripts `SQLQuery3.sql` y `SQLQuery4.sql` fueron excluidos porque corresponden a un ejercicio independiente (`Viajes` / `Destinos`).
 
-La reproducción completa desde una base de datos vacía todavía está pendiente de incorporar los scripts de creación del modelo, los objetos ETL y la carga de datos.
+## Reproducción y limitaciones
 
-## 9. Privacidad de los datos
+El repositorio documenta los scripts y resultados del proyecto, pero **no ofrece todavía una instalación completamente reproducible desde una base de datos vacía**. No se incluye un script integral de creación de la base de datos ni se distribuyen datos fuente, backups o archivos MDF/LDF.
 
-El conjunto de datos original no se publica en este repositorio por motivos de confidencialidad.
+Para consultar el entorno ya preparado, conectar SSMS a la instancia SQL Server 2022 y seleccionar `BASAV_TTII`. Ejecutar los scripts de consulta y medición solo después de verificar que existen las tablas requeridas. No ejecutar scripts de reinicio experimental en una base con información que se quiera conservar.
 
-El proyecto trabaja con las variables Peso, Pallets, Volumen, Bultos y Fecha de creación. Se excluyen nombres de personas, placas, transportistas y otros identificadores operativos.
+## Power BI
 
-Los archivos originales de datos no deben incorporarse al repositorio.
+El dashboard se encuentra documentado en el informe académico e incluye tres páginas:
 
-Los datos sintéticos para las pruebas de volumen de EXP-02 se generarán mediante scripts T-SQL que se incorporarán al repositorio durante la implementación de dicho experimento.
+1. Viajes y Magnitudes por fecha y turno.
+2. Indicadores de carga por turno.
+3. Tendencias y Atípicos.
 
-## 10. Uso de herramientas de inteligencia artificial
+Las páginas forman parte del informe académico y no se incluyen como imágenes independientes en este repositorio.
 
-Se utilizaron herramientas de inteligencia artificial como apoyo para la redacción del informe, la organización del proyecto y la elaboración y revisión de componentes T-SQL.
+## Privacidad y seguridad
 
-El autor es responsable de revisar, ejecutar y validar las implementaciones y los resultados presentados.
+Los archivos originales de datos no se publican. No incluir nombres de personas, placas, transportistas, identificadores operativos, contraseñas, cadenas de conexión, `.bak`, `.mdf`, `.ldf`, `.xlsx` ni `.csv`.
 
-No se incorporaron datos operativos identificables en las consultas realizadas a herramientas de inteligencia artificial.
+## Herramientas
 
-## 11. Licencia
+SQL Server 2022 Developer, SQL Server Management Studio 22.6, Docker, Microsoft Excel y Power BI Desktop. La declaración de uso de herramientas de IA y la autoría académica deben ajustarse a las reglas de la asignatura.
 
-Material académico desarrollado para el curso Base de Datos Avanzadas y Big Data de la Universidad Privada del Norte (UPN), periodo 2026-2.
+## Licencia
 
-Todos los derechos reservados por el autor.
+Material académico desarrollado para el curso Base de Datos Avanzadas y Big Data de la UPN, periodo 2026-2. Todos los derechos reservados por el autor.
 
----
-
-**Repositorio:** https://github.com/Alejandro-QV/basav-bi-traslados-almacenes
-
-**Versión de referencia:** `v0.1-cap-iv`
+Repositorio: https://github.com/Alejandro-QV/basav-bi-traslados-almacenes
